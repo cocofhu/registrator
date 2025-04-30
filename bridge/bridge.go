@@ -202,13 +202,13 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	// Extract configured host port mappings, relevant when using --net=host
 	for port, _ := range container.Config.ExposedPorts {
-		published := []dockerapi.PortBinding{ {"0.0.0.0", port.Port()}, }
-		ports[string(port)] = servicePort(container, port, published)
+		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
+		ports[string(port)] = servicePort(container, port, published, b.config.Network)
 	}
 
 	// Extract runtime port mappings, relevant when using --net=bridge
 	for port, published := range container.NetworkSettings.Ports {
-		ports[string(port)] = servicePort(container, port, published)
+		ports[string(port)] = servicePort(container, port, published, b.config.Network)
 	}
 
 	if len(ports) == 0 && !quiet {
@@ -227,9 +227,16 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		servicePorts[key] = port
 	}
 
-	isGroup := len(servicePorts) > 1
+	// isGroup := len(servicePorts) > 1
+	var flag bool = false
 	for _, port := range servicePorts {
-		service := b.newService(port, isGroup)
+		// 忽略剩下的端口
+		if flag {
+			log.Println("only 1 port can be exposed, ignored: ", container.ID[:12], "service on port", port.ExposedPort)
+			continue
+		}
+		// 不需要分组
+		service := b.newService(port, false)
 		if service == nil {
 			if !quiet {
 				log.Println("ignored:", container.ID[:12], "service on port", port.ExposedPort)
@@ -241,6 +248,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 			log.Println("register failed:", service, err)
 			continue
 		}
+		flag = true
 		b.services[container.ID] = append(b.services[container.ID], service)
 		log.Println("added:", container.ID[:12], service.ID)
 	}
@@ -309,7 +317,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 				service.IP = containerIp
 			}
 			log.Println("using container IP " + service.IP + " from label '" +
-				b.config.UseIpFromLabel  + "'")
+				b.config.UseIpFromLabel + "'")
 		} else {
 			log.Println("Label '" + b.config.UseIpFromLabel +
 				"' not found in container configuration")

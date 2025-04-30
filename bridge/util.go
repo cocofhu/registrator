@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -84,7 +85,7 @@ func serviceMetaData(config *dockerapi.Config, port string) (map[string]string, 
 	return metadata, metadataFromPort
 }
 
-func servicePort(container *dockerapi.Container, port dockerapi.Port, published []dockerapi.PortBinding) ServicePort {
+func servicePort(container *dockerapi.Container, port dockerapi.Port, published []dockerapi.PortBinding, network string) ServicePort {
 	var hp, hip, ep, ept, eip, nm string
 	if len(published) > 0 {
 		hp = published[0].HostPort
@@ -112,6 +113,12 @@ func servicePort(container *dockerapi.Container, port dockerapi.Port, published 
 
 	// Nir: support docker NetworkSettings
 	eip = container.NetworkSettings.IPAddress
+	// 优先从指定接口拿IP
+	if _, ok := container.NetworkSettings.Networks[network]; ok {
+		eip = container.NetworkSettings.Networks[network].IPAddress
+		log.Println("matched network ", container.ID[:12], "eip ", eip)
+	}
+
 	if eip == "" {
 		for _, network := range container.NetworkSettings.Networks {
 			eip = network.IPAddress

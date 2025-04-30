@@ -32,6 +32,9 @@ var retryAttempts = flag.Int("retry-attempts", 0, "Max retry attempts to establi
 var retryInterval = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
 var cleanup = flag.Bool("cleanup", false, "Remove dangling services")
 
+// 多网卡时优先从指定的接口获取IP
+var network = flag.String("network", "macvlan_net", "Prioritize obtaining IP addresses from designated networks")
+
 func getopt(name, def string) string {
 	if env := os.Getenv(name); env != "" {
 		return env
@@ -112,6 +115,7 @@ func main() {
 		RefreshInterval: *refreshInterval,
 		DeregisterCheck: *deregister,
 		Cleanup:         *cleanup,
+		Network:         *network,
 	})
 
 	assert(err)
