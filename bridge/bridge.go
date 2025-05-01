@@ -358,11 +358,11 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	delete(metadata, "tags")
 	delete(metadata, "name")
 	// fix：端口在ENV里改变时，进行存活检查时未即使同步
-    // 从metadata里覆盖端口
+    	// 从metadata里覆盖端口
 	if p, ok := metadata["port"]; ok {
 		if x, e := strconv.Atoi(p); e == nil {
-            service.Port = x
-        }
+            		service.Port = x
+        	}
 	}
 	service.Attrs = metadata
 	service.TTL = b.config.RefreshTtl
